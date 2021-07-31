@@ -5,27 +5,23 @@ import numpy as np
 cv2.ocl.setUseOpenCL(False)
 
 
-def stitch_images(img1, img2, feature_extractor='orb', feature_matching='bf'):
+def stitch_images(img1, img2, feature_extractor='orb', feature_matching='bf', nfeatures=500):
     # feature_extractor is one of 'sift', 'kaze', 'akaze', 'brisk', 'orb'
 
     img1_gray = cv2.cvtColor(img1, cv2.COLOR_RGB2GRAY)
     img2_gray = cv2.cvtColor(img2, cv2.COLOR_RGB2GRAY)
 
-    kpsA, featuresA = detectAndDescribe(img1_gray, method=feature_extractor)
-    kpsB, featuresB = detectAndDescribe(img2_gray, method=feature_extractor)
+    kpsA, featuresA = detectAndDescribe(img1_gray, method=feature_extractor, nfeatures=nfeatures)
+    kpsB, featuresB = detectAndDescribe(img2_gray, method=feature_extractor, nfeatures=nfeatures)
 
     if feature_matching == 'bf':
         matches = matchKeyPointsBF(featuresA, featuresB, method=feature_extractor)
-        img3 = cv2.drawMatches(img1, kpsA, img2, kpsB, matches[:100],
-                               None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
     elif feature_matching == 'knn':
         matches = matchKeyPointsKNN(featuresA, featuresB, ratio=0.75, method=feature_extractor)
-        img3 = cv2.drawMatches(img1, kpsA, img2, kpsB, np.random.choice(matches, 100),
-                               None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
 
     M = getHomography(kpsA, kpsB, featuresA, featuresB, matches, reprojThresh=4)
     if M is None:
-        print("Error!")
+        return None
     (matches, H, status) = M
 
     # Apply panorama correction
@@ -55,7 +51,7 @@ def stitch_images(img1, img2, feature_extractor='orb', feature_matching='bf'):
     return result
 
 
-def detectAndDescribe(image, method=None):
+def detectAndDescribe(image, method=None, nfeatures=500):
     """
     Compute key points and feature descriptors using an specific method
     """
@@ -64,7 +60,7 @@ def detectAndDescribe(image, method=None):
 
     # detect and extract features from the image
     if method == 'sift':
-        descriptor = cv2.SIFT_create()
+        descriptor = cv2.SIFT_create(nfeatures=nfeatures)
     elif method == 'kaze':
         descriptor = cv2.KAZE_create()
     elif method == 'akaze':
