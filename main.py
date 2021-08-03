@@ -10,22 +10,25 @@ from opencv_imagestitching import stitch_images
 from utils import cut_and_project
 
 plot = False
+imgs_wildcard = 'in/*.png'
+imgs_num = 1
 
 if __name__ == '__main__':
-    imgs_list = glob('in/Fabric1/*/img/*.png')[:200]
-    imgs_num = len(imgs_list)
-    print(imgs_num)
+    imgs_list = glob(imgs_wildcard)
+    imgs_num = len(imgs_list) if imgs_num is None else imgs_num
+    imgs_list = imgs_list[:imgs_num]
+
+    print('Total images: ', imgs_num)
     for overlap_percent in np.arange(0.02, 0.32, 0.02):
         ssim_sum = 0
         none_num = 0
         start_time = time.time()
 
         for img_path in tqdm(imgs_list):
-
             orig_img = cv2.imread(img_path)
             img1, img2 = cut_and_project(orig_img, overlap_percent=overlap_percent)
 
-            result_img = stitch_images(img2, img1, feature_extractor='sift', feature_matching='knn',
+            result_img = stitch_images(img1, img2, feature_extractor='sift', feature_matcher='knn',
                                        nfeatures=5000)
 
             if result_img is None:
