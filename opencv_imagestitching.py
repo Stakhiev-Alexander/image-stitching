@@ -124,8 +124,6 @@ def stitch_images(img1, img2, feature_extractor='sift', feature_matcher='bf', nf
     :param nfeatures: feature number constraint for SIFT
     :return: resulting image if successful otherwise None
     """
-    # feature_extractor is one of 'sift', 'kaze', 'akaze', 'brisk', 'orb'
-
     assert feature_extractor in feature_extractors
     assert feature_matcher in feature_matchers
 
