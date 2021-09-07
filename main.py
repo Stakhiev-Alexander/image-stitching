@@ -19,14 +19,15 @@ if __name__ == '__main__':
     imgs_list = imgs_list[:imgs_num]
 
     print('Total images: ', imgs_num)
-    for overlap_percent in np.arange(0.02, 0.32, 0.02):
+    # for overlap_percent in np.arange(0.02, 0.32, 0.02):
+    for overlap_percent in [0.02]:
         ssim_sum = 0
         none_num = 0
         start_time = time.time()
 
         for img_path in tqdm(imgs_list):
             orig_img = cv2.imread(img_path)
-            img1, img2 = cut_and_project(orig_img, overlap_percent=overlap_percent)
+            img1, img2 = cut_and_project(orig_img, overlap_percent=overlap_percent, warp_percent=0.00)
 
             result_img = stitch_images(img1, img2, feature_extractor='sift', feature_matcher='knn',
                                        nfeatures=5000)

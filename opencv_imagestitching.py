@@ -4,7 +4,7 @@ import numpy as np
 
 cv2.ocl.setUseOpenCL(False)
 
-feature_extractors = ('sift', 'kaze', 'akaze', 'brisk', 'orb')
+feature_extractors = ('sift', 'kaze', 'akaze', 'brisk', 'orb', 'fast')
 feature_matchers = ('bf', 'knn')
 
 
@@ -60,9 +60,18 @@ def _detect_and_describe(image, method, nfeatures=5000):
         descriptor = cv2.BRISK_create()
     elif method == 'orb':
         descriptor = cv2.ORB_create()
+    elif method == 'fast':
+        descriptor = cv2.FastFeatureDetector_create()
+        kps = descriptor.detect(image)
 
     # get keypoints and descriptors
-    kps, features = descriptor.detectAndCompute(image, None)
+    if method != 'fast':
+        kps, features = descriptor.detectAndCompute(image, None)
+    else:
+        descriptor = cv2.SIFT_create(nfeatures=nfeatures)
+        kps = kps[:nfeatures]
+        kps = sorted(kps, key=lambda kp: kp.response)
+        features = descriptor.compute(image, kps)
 
     return kps, features
 
