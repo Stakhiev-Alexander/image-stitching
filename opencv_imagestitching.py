@@ -63,15 +63,16 @@ def _detect_and_describe(image, method, nfeatures=5000):
     elif method == 'fast':
         descriptor = cv2.FastFeatureDetector_create()
         kps = descriptor.detect(image)
+        print(len(kps))
 
     # get keypoints and descriptors
     if method != 'fast':
         kps, features = descriptor.detectAndCompute(image, None)
     else:
         descriptor = cv2.SIFT_create(nfeatures=nfeatures)
+        kps = sorted(kps, key=lambda kp: kp.response, reverse=True)
         kps = kps[:nfeatures]
-        kps = sorted(kps, key=lambda kp: kp.response)
-        features = descriptor.compute(image, kps)
+        kps, features = descriptor.compute(image, kps)
 
     return kps, features
 
