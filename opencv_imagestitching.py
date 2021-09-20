@@ -63,7 +63,6 @@ def _detect_and_describe(image, method, nfeatures=5000):
     elif method == 'fast':
         descriptor = cv2.FastFeatureDetector_create()
         kps = descriptor.detect(image)
-        print(len(kps))
 
     # get keypoints and descriptors
     if method != 'fast':
@@ -119,7 +118,7 @@ def _perspective_and_size_correction(img1, img2, retval):
     (x, y, w, h) = cv2.boundingRect(c)
 
     # crop the image to the bbox coordinates
-    result = result[y:y + h, x:x + w]
+    # result = result[y:y + h, x:x + w]
 
     return result
 
@@ -152,4 +151,4 @@ def stitch_images(img1, img2, feature_extractor='sift', feature_matcher='bf', nf
 
     result = _perspective_and_size_correction(img1, img2, retval)
 
-    return result
+    return result, retval

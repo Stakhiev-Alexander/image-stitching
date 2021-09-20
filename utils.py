@@ -16,14 +16,13 @@ def cut_and_project(img, overlap_percent=0.2, warp_percent=0.1):
     :param overlap_percent: percentage by which one sliced piece of the image will overlap the other
     :return: 2 cropped and projected images in openCV format
     """
-    # yet without projection
     h, w = img.shape[0], img.shape[1]
-    # print(h, w)
+
     crop_img1 = img[:, int(w * (0.5 - overlap_percent)):]
     crop_img2 = img[:, :int(w * (0.5 + overlap_percent))]
 
     h, w = crop_img1.shape[0], crop_img1.shape[1]
-    # print(h, w)
+
     in_pts = np.float32([[0, int(h * warp_percent)], [w - 1, 0], [w - 1, h - 1], [0, int(h * (1 - warp_percent))]])
     out_pts = np.float32([[0, 0], [w - 1, 0], [w - 1, h - 1], [0, h - 1]])
     cp_img2 = project(in_pts, out_pts, crop_img2, h, w)
