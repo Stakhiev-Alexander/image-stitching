@@ -101,7 +101,10 @@ def _perspective_and_size_correction(img1, img2, retval):
     height = img1.shape[0] + img2.shape[0]
 
     result = cv2.warpPerspective(img1, retval, (width, height))
-    result[0:img2.shape[0], 0:img2.shape[1]] = img2
+
+    img2_copy = np.zeros((height, width, 3), np.uint8)
+    img2_copy[0:img2.shape[0], 0:img2.shape[1]] = img2
+    result = cv2.addWeighted(result, 0.5, img2_copy, 0.5, 0)
 
     # transform the panorama image to grayscale and threshold it
     gray = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
