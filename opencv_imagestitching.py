@@ -150,7 +150,7 @@ def stitch_images(img1, img2, feature_extractor='sift', feature_matcher='bf', nf
 
     retval = _get_homography(kps1, kps2, matches)
     if retval is None:
-        return None
+        return None, None
 
     result = _perspective_and_size_correction(img1, img2, retval)
 
