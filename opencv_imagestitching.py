@@ -1,6 +1,7 @@
 import cv2
 import imutils
 import numpy as np
+import matplotlib.pyplot as plt
 
 cv2.ocl.setUseOpenCL(False)
 
@@ -44,10 +45,18 @@ def _match_key_points(features1, features2, matching_method, extraction_method, 
     return matches
 
 
-def _detect_and_describe(image, method, nfeatures=5000):
+def _detect_and_describe(image, method, nfeatures=5000, roi_side='all'):
     """
     Compute key points and feature descriptors using an specific method
     """
+    if roi_side == 'left':
+        roi_image = image.copy()
+        roi_image[:, int(image.shape[1] * 0.15):] = 0
+    elif roi_side == 'right':
+        roi_image = image.copy()
+        roi_image[:, :int(image.shape[1] * 0.85)] = 0
+    else:
+        roi_image = image
 
     # detect and extract features from the image
     if method == 'sift':
@@ -62,7 +71,7 @@ def _detect_and_describe(image, method, nfeatures=5000):
         descriptor = cv2.ORB_create()
     elif method == 'fast':
         descriptor = cv2.FastFeatureDetector_create()
-        kps = descriptor.detect(image)
+        kps = descriptor.detect(roi_image)
 
     # get keypoints and descriptors
     if method != 'fast':
@@ -71,7 +80,7 @@ def _detect_and_describe(image, method, nfeatures=5000):
         descriptor = cv2.SIFT_create(nfeatures=nfeatures)
         kps = sorted(kps, key=lambda kp: kp.response, reverse=True)
         kps = kps[:nfeatures]
-        kps, features = descriptor.compute(image, kps)
+        kps, features = descriptor.compute(roi_image, kps)
 
     return kps, features
 
@@ -83,28 +92,32 @@ def _get_homography(kps1, kps2, matches, reprojection_threshold=4):
 
     if len(matches) > 4:
         # construct the two sets of points
-        ptsA = np.float32([kps1[m.queryIdx] for m in matches])
-        ptsB = np.float32([kps2[m.trainIdx] for m in matches])
+        pts1 = np.float32([kps1[m.queryIdx] for m in matches])
+        pts2 = np.float32([kps2[m.trainIdx] for m in matches])
 
         # estimate the homography between the sets of points
-        retval, status = cv2.findHomography(ptsA, ptsB, cv2.RANSAC,
+        H, status = cv2.findHomography(pts1, pts2, cv2.RANSAC,
                                             reprojection_threshold)
 
-        return retval
+        return H
     else:
         return None
 
 
-def _perspective_and_size_correction(img1, img2, retval):
+def _perspective_and_size_correction(img1, img2, H):
     # Apply panorama correction
     width = img1.shape[1] + img2.shape[1]
     height = img1.shape[0] + img2.shape[0]
 
-    result = cv2.warpPerspective(img1, retval, (width, height))
+    # result = cv2.warpPerspective(img1, H, (width, height))
+    result = cv2.perspectiveTransform(img1, H)
+    plt.imshow(result)
+    plt.show()
 
-    img2_copy = np.zeros((height, width, 3), np.uint8)
-    img2_copy[0:img2.shape[0], 0:img2.shape[1]] = img2
-    result = cv2.addWeighted(result, 0.5, img2_copy, 0.5, 0)
+    # img2_copy = np.zeros((height, width, 3), np.uint8)
+    # img2_copy[0:img2.shape[0], 0:img2.shape[1]] = img2
+    # result = cv2.addWeighted(result, 0.5, img2_copy, 0.5, 0)
+    result[0:img2.shape[0], 0:img2.shape[1]] = img2
 
     # transform the panorama image to grayscale and threshold it
     gray = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
@@ -142,16 +155,31 @@ def stitch_images(img1, img2, feature_extractor='sift', feature_matcher='bf', nf
     img1_gray = cv2.cvtColor(img1, cv2.COLOR_RGB2GRAY)
     img2_gray = cv2.cvtColor(img2, cv2.COLOR_RGB2GRAY)
 
-    kps1, features1 = _detect_and_describe(img1_gray, method=feature_extractor, nfeatures=nfeatures)
-    kps2, features2 = _detect_and_describe(img2_gray, method=feature_extractor, nfeatures=nfeatures)
+    kps1, features1 = _detect_and_describe(img1_gray, method=feature_extractor, nfeatures=nfeatures, roi_side='right')
+    kps2, features2 = _detect_and_describe(img2_gray, method=feature_extractor, nfeatures=nfeatures, roi_side='left')
+
+    fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2, figsize=(20, 8), constrained_layout=False)
+    ax1.imshow(cv2.drawKeypoints(img1_gray, kps1, None, color=(0, 255, 0)))
+    ax1.set_xlabel("(a)", fontsize=14)
+    ax2.imshow(cv2.drawKeypoints(img2_gray, kps2, None, color=(0, 255, 0)))
+    ax2.set_xlabel("(b)", fontsize=14)
+
+    plt.show()
 
     matches = _match_key_points(features1, features2, matching_method=feature_matcher,
                                 extraction_method=feature_extractor)
 
-    retval = _get_homography(kps1, kps2, matches)
-    if retval is None:
+    fig = plt.figure(figsize=(20, 8))
+    img3 = cv2.drawMatches(img1_gray, kps1, img2_gray, kps2, matches,
+                           None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+
+    plt.imshow(img3)
+    plt.show()
+
+    H = _get_homography(kps1, kps2, matches)
+    if H is None:
         return None, None
 
-    result = _perspective_and_size_correction(img1, img2, retval)
+    result = _perspective_and_size_correction(img1, img2, H)
 
-    return result, retval
+    return result, H

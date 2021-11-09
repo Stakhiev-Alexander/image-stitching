@@ -6,11 +6,8 @@ import numpy as np
 from opencv_imagestitching import stitch_images
 from utils import cut_and_project
 
-plot = False
-imgs_wildcard = 'in/all/*.png'
-imgs_num = 50
 
-if __name__ == '__main__':
+def test_metrics(imgs_wildcard='input/*.bmp', imgs_num=50, plot=False):
     imgs_list = glob(imgs_wildcard)
     imgs_num = len(imgs_list) if imgs_num is None else imgs_num
     imgs_list = imgs_list[:imgs_num]
@@ -21,8 +18,8 @@ if __name__ == '__main__':
         print(f"scale: {scale}")
         for warp_percent in np.arange(0.02, 0.13, 0.02):
             for overlap_percent in np.arange(0.04, 0.25, 0.02):
-        # for warp_percent in [0.15]:
-        #     for overlap_percent in [0.15]:
+                # for warp_percent in [0.15]:
+                #     for overlap_percent in [0.15]:
                 none_num = 0
                 diffs = [0, 0, 0]
 
@@ -47,8 +44,9 @@ if __name__ == '__main__':
                                         (0, int(h / 2)),
                                         (0, h)]
 
-                    img1, img2, matrix = cut_and_project(orig_img, overlap_percent=overlap_percent, warp_percent=warp_percent,
-                                                 plot=False)
+                    img1, img2, matrix = cut_and_project(orig_img, overlap_percent=overlap_percent,
+                                                         warp_percent=warp_percent,
+                                                         plot=False)
 
                     result_img, retval = stitch_images(img1, img2, feature_extractor='fast', feature_matcher='knn',
                                                        nfeatures=10000)
@@ -95,7 +93,7 @@ if __name__ == '__main__':
                           f' None return')
                 else:
                     print(f'{warp_percent:.2f} '
-                          f'{int(overlap_length)}({(overlap_percent*100):.0f}%) '
+                          f'{int(overlap_length)}({(overlap_percent * 100):.0f}%) '
                           f'{diffs[0] / imgs_num:.2f} '
                           f'{diffs[1] / imgs_num:.2f} '
                           f'{diffs[2] / imgs_num:.2f} '
@@ -103,3 +101,36 @@ if __name__ == '__main__':
         print()
         print()
 
+
+def test_pair_imgs(imgs_wildcard='input/all_pairs/*/'):
+    imgs_list = glob(imgs_wildcard)
+    imgs_num = len(imgs_list)
+
+    print('Total images: ', imgs_num)
+
+    for imgs_pair_path in imgs_list:
+        img1_path = glob(imgs_pair_path + '/*_1.bmp')[0]
+        img2_path = glob(imgs_pair_path + '/*_2.bmp')[0]
+        orig1_img = cv2.imread(img1_path)
+        orig2_img = cv2.imread(img2_path)
+        # orig_img = cv2.resize(orig_img, (0, 0), fx=scale, fy=scale)
+        result_img, retval = stitch_images(orig1_img, orig2_img, feature_extractor='fast', feature_matcher='knn',
+                                           nfeatures=50000)
+
+        if result_img is None:
+            print("got None on " + img1_path)
+            continue
+
+        orig1_img_half = cv2.resize(orig1_img, (0, 0), fx=0.25, fy=0.25)
+        orig2_img_half = cv2.resize(orig2_img, (0, 0), fx=0.25, fy=0.25)
+        result_half = cv2.resize(result_img, (0, 0), fx=0.25, fy=0.25)
+
+        cv2.imshow("orig1_img", orig1_img_half)
+        cv2.imshow("orig2_img", orig2_img_half)
+        cv2.imshow("result", result_half)
+        cv2.waitKey()
+
+
+if __name__ == '__main__':
+    # test_metrics()
+    test_pair_imgs()
